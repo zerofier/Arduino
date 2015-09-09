@@ -50,9 +50,8 @@ const word BUF_SIZE = CMD_HEAD_SIZE + CMD_READ_SIZE + CMD_FOOT_SIZE + 6;
 byte recv_buf[BUF_SIZE];
 word picture_size = 0;
 word picture_offset = 0;
-byte is_big = 0;
+byte take_big = 0;
 bool active = false;
-word coordAddr = 0xFFFE;
 
 SoftwareSerial cameraSerila(7, 10);
 JPEGCamera camera(cameraSerila);
@@ -63,6 +62,7 @@ AtCommandResponse atResponse;
 XBeeAddress64 addr64;
 ZBTxRequest zbTxRequest;
 ZBTxStatusResponse zbTxStatus;
+ZBRxResponse zbRxResponse;
 
 void xbee_cts() {
   CTS = (CTS == LOW ? HIGH : LOW);
@@ -93,17 +93,19 @@ void loop() {
   // recv command from controller
   xbee.readPacket();
   if (xbee.getResponse().isAvailable()) {
-    if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
-      xbee.getResponse().getZBTxStatusResponse(zbTxStatus);
+    if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+      xbee.getResponse().getZBRxResponse(zbRxResponse);
+
+      active = true;
     }
   }
 
   if (active) {
     // take new picture if no data or send over.
     if (picture_size <= 0) {
-      if (is_big) {
+      if (take_big) {
         camera.imageSizeOnce(JPEGCamera::IMG_SZ_640x480);
-        is_big = 0;
+        take_big = 0;
       }
       // take picture
       camera.takePicture();
