@@ -118,13 +118,14 @@ void loop() {
       // read data failed.
       return;
 
-    // TODO: add info to send data
+    // add info to send data
     memcpy(recv_buf + 2, recv_buf, recv_size);
     recv_buf[0] = picture_offset >> 8;
     recv_buf[1] = picture_offset & 0xFF;
     
     // send to remote
-    zbTxRequest = ZBTxRequest(addr64, recv_buf, recv_size + 2);
+    zbTxRequest.setPayload(recv_buf);
+    zbTxRequest.setPayloadLength(recv_size + 2);
     // send data to controller
     xbee.send(zbTxRequest);
 
@@ -161,6 +162,7 @@ bool findCoord() {
       xbee.getResponse().getAtCommandResponse(atResponse);
 
       addr64 = XBeeAddress64(0x00000000, 0x0000FFFF);
+      zbTxRequest = ZBTxRequest(addr64, NULL, NULL);
       return true;
     }
   }

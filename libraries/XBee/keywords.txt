@@ -26,6 +26,8 @@ isAvailable	KEYWORD2
 getAtCommandResponse	KEYWORD2
 getZBRxResponse	KEYWORD2
 getZBTxStatusResponse	KEYWORD2
+setPayload	KEYWORD2
+setPayloadLength	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
