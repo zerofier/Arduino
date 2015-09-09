@@ -60,8 +60,9 @@ XBee xbee;
 
 AtCommandRequest atRequest;
 AtCommandResponse atResponse;
-Tx16Request txRequest;
-Rx16Response rxResponse;
+XBeeAddress64 addr64;
+ZBTxRequest zbTxRequest;
+ZBTxStatusResponse zbTxStatus;
 
 void xbee_cts() {
   CTS = (CTS == LOW ? HIGH : LOW);
@@ -92,8 +93,8 @@ void loop() {
   // recv command from controller
   xbee.readPacket();
   if (xbee.getResponse().isAvailable()) {
-    if (xbee.getResponse().getApiId() == RX_16_RESPONSE) {
-      xbee.getResponse().getRx16Response(rxResponse);
+    if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
+      xbee.getResponse().getZBTxStatusResponse(zbTxStatus);
     }
   }
 
@@ -115,12 +116,19 @@ void loop() {
       // read data failed.
       return;
 
+    // TODO: add info to send data
+    memcpy(recv_buf + 2, recv_buf, recv_size);
+    recv_buf[0] = picture_offset >> 8;
+    recv_buf[1] = picture_offset & 0xFF;
+    
+    // send to remote
+    zbTxRequest = ZBTxRequest(addr64, recv_buf, recv_size + 2);
+    // send data to controller
+    xbee.send(zbTxRequest);
+
     // calculate next read addres.
     picture_size -= recv_size;
     picture_offset += recv_size;
-
-    // send data to controller
-    xbee.send(txRequest);
 
     // stop picture
     if (picture_size <= 0) {
@@ -131,15 +139,17 @@ void loop() {
     // wait up to 5 seconds for the status response
     if (xbee.readPacket(5000)) {
       if (xbee.getResponse().getApiId() == TX_STATUS_RESPONSE) {
-
+        xbee.getResponse().getZBTxStatusResponse(zbTxStatus);
       }
+    } else {
+      // TODO: timeout -> retry send ?
     }
   }
 }
 
 bool findCoord() {
   atRequest.setCommand((byte*)"ND");
-  
+
   // send the command
   xbee.send(atRequest);
 
@@ -148,6 +158,7 @@ bool findCoord() {
     if (xbee.getResponse().getApiId() == AT_RESPONSE) {
       xbee.getResponse().getAtCommandResponse(atResponse);
 
+      addr64 = XBeeAddress64(0x00000000, 0x0000FFFF);
       return true;
     }
   }
